@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PesaSmart — Kenya Budget App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1D9E75;
+    --green-dark: #0F6E56;
+    --green-light: #E1F5EE;
+    --red: #E24B4A;
+    --red-light: #FCEBEB;
+    --blue: #378ADD;
+    --blue-light: #E6F1FB;
+    --amber: #EF9F27;
+    --amber-light: #FAEEDA;
+    --bg: #F5F7F6;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.08);
+    --text: #1A1A1A;
+    --muted: #6B7280;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.08);
+  }
+
+  /* HEADER */
+  .header {
+    padding: 20px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--green); }
+  .header-date {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 5px 10px;
+    border-radius: 99px;
+  }
+
+  /* SCROLL CONTENT */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 100px;
+  }
+
+  /* TOTAL CARD */
+  .total-card {
+    background: linear-gradient(135deg, #0B4D3B 0%, #1D9E75 60%, #2ECC9B 100%);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .total-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 150px; height: 150px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 50%;
+  }
+  .total-card::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; left: 30px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .total-label { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 4px; letter-spacing: .5px; text-transform: uppercase; }
+  .total-amount { font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+  .total-sub { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
+  .total-row { display: flex; gap: 16px; margin-top: 16px; }
+  .total-stat { flex: 1; background: rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; }
+  .total-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.65); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .4px; }
+  .total-stat-val { font-size: 15px; font-weight: 600; color: #fff; }
+
+  /* WALLET GRID */
+  .wallet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .wallet-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 12px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .wallet-card:hover { border-color: var(--green); transform: translateY(-1px); }
+  .wallet-card.selected { border: 2px solid var(--green); background: var(--green-light); }
+  .wallet-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .w-mpesa .wallet-icon { background: var(--green-light); color: var(--green-dark); }
+  .w-airtel .wallet-icon { background: var(--red-light); color: var(--red); }
+  .w-bank .wallet-icon { background: var(--blue-light); color: var(--blue); }
+  .wallet-name { font-size: 10px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .4px; }
+  .wallet-bal { font-size: 15px; font-weight: 600; color: var(--text); }
+
+  /* SECTION */
+  .section-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  /* FORM */
+  .form-row { display: grid; gap: 10px; margin-bottom: 10px; }
+  .form-row-2 { grid-template-columns: 1fr 1fr; }
+  .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--green); background: #fff; }
+
+  /* BUTTONS */
+  .btn {
+    width: 100%; padding: 13px;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all .15s;
+    margin-bottom: 16px;
+    letter-spacing: .2px;
+  }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:hover { background: var(--green-dark); }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+  .btn-danger:hover { background: var(--red-light); }
+  .btn-danger:active { transform: scale(.98); }
+
+  /* TRANSACTIONS */
+  .txn-list { display: flex; flex-direction: column; gap: 8px; }
+  .txn {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    transition: background .1s;
+  }
+  .txn:hover { background: #eef0ef; }
+  .txn-left { display: flex; align-items: center; gap: 10px; }
+  .txn-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .txn-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .txn-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .txn-amt { font-size: 14px; font-weight: 600; }
+  .txn-amt.credit { color: var(--green); }
+  .txn-amt.debit { color: var(--red); }
+
+  /* CHART */
+  .chart-wrap { position: relative; width: 100%; margin-bottom: 20px; }
+
+  /* BUDGET BARS */
+  .budget-bars { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .bbar { display: flex; flex-direction: column; gap: 5px; }
+  .bbar-top { display: flex; justify-content: space-between; font-size: 13px; }
+  .bbar-cat { color: var(--text); font-weight: 500; }
+  .bbar-vals { color: var(--muted); }
+  .bbar-track { height: 7px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .bbar-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+
+  /* ALERTS */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .alert-item {
+    display: flex; gap: 10px;
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 1.5;
+    align-items: flex-start;
+  }
+  .alert-warn { background: var(--amber-light); color: #7A4A0B; border-left: 3px solid var(--amber); }
+  .alert-ok { background: var(--green-light); color: var(--green-dark); border-left: 3px solid var(--green); }
+
+  /* GOALS */
+  .goal-card {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .goal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .goal-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .goal-pct { font-size: 14px; font-weight: 700; color: var(--green); }
+  .goal-track { height: 8px; background: rgba(0,0,0,0.08); border-radius: 99px; overflow: hidden; margin-bottom: 7px; }
+  .goal-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width .4s; }
+  .goal-sub { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+  .goal-delete { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px; }
+  .goal-delete:hover { color: var(--red); }
+
+  /* SMART CARDS */
+  .smart-card {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .smart-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 7px; }
+  .smart-item { font-size: 14px; font-weight: 600; color: var(--text); }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
+  .badge-save { background: var(--green-light); color: var(--green-dark); }
+  .badge-warn { background: var(--amber-light); color: #7A4A0B; }
+  .smart-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+  .smart-options { display: flex; gap: 6px; flex-wrap: wrap; }
+  .opt-chip {
+    font-size: 11px; padding: 4px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+    font-weight: 500;
+  }
+  .opt-chip.best { border-color: var(--green); color: var(--green-dark); background: var(--green-light); }
+
+  /* MPESA CALC */
+  .mpesa-result {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    display: none;
+    margin-top: 6px;
+    margin-bottom: 16px;
+  }
+  .mpesa-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+  .mpesa-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .mpesa-row span:first-child { color: var(--muted); }
+  .mpesa-row span:last-child { font-weight: 600; }
+  .mpesa-row.total span:last-child { color: var(--green); font-size: 15px; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 2rem 0; color: var(--muted); font-size: 14px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 8px 0 16px;
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none;
+    cursor: pointer; padding: 4px 0;
+    color: var(--muted);
+    font-size: 10px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    text-transform: uppercase; letter-spacing: .4px;
+    transition: color .15s;
+  }
+  .nav-btn svg { width: 20px; height: 20px; }
+  .nav-btn.active { color: var(--green); }
+  .nav-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--green);
+    display: none;
+    margin: 0 auto;
+  }
+  .nav-btn.active .nav-dot { display: block; }
+
+  /* SCREENS */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* MONTHLY BUDGET EDITOR */
+  .budget-editor-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .budget-editor-row:last-child { border-bottom: none; }
+  .budget-editor-cat { font-size: 14px; color: var(--text); flex: 1; }
+  .budget-editor-input {
+    width: 110px; padding: 6px 10px;
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+    outline: none; text-align: right;
+  }
+  .budget-editor-input:focus { border-color: var(--green); background: #fff; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #1A1A1A; color: #fff;
+    padding: 10px 20px; border-radius: 99px;
+    font-size: 13px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+    z-index: 200; white-space: nowrap;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; }
+
+  /* SCROLLBAR */
+  .content::-webkit-scrollbar { width: 3px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <div class="logo">Pesa<span>Smart</span></div>
+    <div class="header-date" id="today-date"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <div id="screen-home" class="screen active">
+      <div class="total-card">
+        <div class="total-label">Total Balance</div>
+        <div class="total-amount" id="total-bal">KSh 0</div>
+        <div class="total-sub" id="spent-today">Spent today: KSh 0</div>
+        <div class="total-row">
+          <div class="total-stat">
+            <div class="total-stat-lbl">This Week</div>
+            <div class="total-stat-val" id="week-spend">KSh 0</div>
+          </div>
+          <div class="total-stat">
+            <div class="total-stat-lbl">This Month</div>
+            <div class="total-stat-val" id="month-spend">KSh 0</div>
+          </div>
+          <div class="total-stat">
+            <div class="total-stat-lbl">Transactions</div>
+            <div class="total-stat-val" id="txn-count">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wallet-grid">
+        <div class="wallet-card w-mpesa" id="wc-mpesa" onclick="selectWallet('mpesa')">
+          <div class="wallet-icon">MP</div>
+          <div class="wallet-name">M-Pesa</div>
+          <div class="wallet-bal" id="bal-mpesa">KSh 0</div>
+        </div>
+        <div class="wallet-card w-airtel" id="wc-airtel" onclick="selectWallet('airtel')">
+          <div class="wallet-icon">AM</div>
+          <div class="wallet-name">Airtel Money</div>
+          <div class="wallet-bal" id="bal-airtel">KSh 0</div>
+        </div>
+        <div class="wallet-card w-bank" id="wc-bank" onclick="selectWallet('bank')">
+          <div class="wallet-icon">BK</div>
+          <div class="wallet-name">Bank</div>
+          <div class="wallet-bal" id="bal-bank">KSh 0</div>
+        </div>
+      </div>
+
+      <div class="section-title">Add Money</div>
+      <div class="form-row form-row-3">
+        <div class="form-group">
+          <label>Wallet</label>
+          <select id="add-wallet">
+            <option value="mpesa">M-Pesa</option>
+            <option value="airtel">Airtel Money</option>
+            <option value="bank">Bank</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Amount (KSh)</label>
+          <input type="number" id="add-amount" placeholder="5000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Note</label>
+          <input type="text" id="add-note" placeholder="Salary, gift…">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addMoney()">+ Add Balance</button>
+
+      <div class="section-title">Recent Transactions</div>
+      <div class="txn-list" id="home-txns"></div>
+    </div>
+
+    <!-- SPEND -->
+    <div id="screen-spend" class="screen">
+      <div class="section-title">Record Expense</div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="sp-cat">
+            <option>Food</option><option>Transport</option><option>Utilities</option>
+            <option>Shopping</option><option>Entertainment</option><option>Health</option>
+            <option>Education</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Wallet</label>
+          <select id="sp-wallet">
+            <option value="mpesa">M-Pesa</option>
+            <option value="airtel">Airtel Money</option>
+            <option value="bank">Bank</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label>Amount (KSh)</label>
+          <input type="number" id="sp-amount" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="sp-desc" placeholder="e.g. Lunch at Java">
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="spendMoney()">− Record Expense</button>
+
+      <div class="section-title">Budget Progress</div>
+      <div class="budget-bars" id="budget-bars"></div>
+      <div class="alert-list" id="alerts"></div>
+
+      <div class="section-title">All Transactions</div>
+      <div class="txn-list" id="spend-txns"></div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div id="screen-insights" class="screen">
+      <div class="section-title">7-Day Spending</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="weekChart" role="img" aria-label="Bar chart of daily spending over last 7 days">Daily spending for the past 7 days in KSh.</canvas>
+      </div>
+      <div class="section-title">Spending by Category</div>
+      <div class="chart-wrap" style="height:230px">
+        <canvas id="catChart" role="img" aria-label="Doughnut chart of spending by category">Category breakdown of all spending.</canvas>
+      </div>
+      <div class="section-title">Wallet Distribution</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="walletChart" role="img" aria-label="Doughnut chart of balance per wallet">Wallet balance distribution.</canvas>
+      </div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="screen-goals" class="screen">
+      <div class="section-title">My Savings Goals</div>
+      <div id="goal-list"></div>
+
+      <div class="section-title">New Goal</div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label>Goal Name</label>
+          <input type="text" id="goal-name" placeholder="e.g. New Phone">
+        </div>
+        <div class="form-group">
+          <label>Target (KSh)</label>
+          <input type="number" id="goal-target" placeholder="50000">
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label>Saved So Far (KSh)</label>
+          <input type="number" id="goal-saved" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Deadline</label>
+          <input type="date" id="goal-date">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addGoal()">+ Add Goal</button>
+
+      <div class="section-title">Edit Monthly Budgets</div>
+      <div id="budget-editor"></div>
+    </div>
+
+    <!-- SMART SAVE -->
+    <div id="screen-smart" class="screen">
+      <div class="section-title">Personalised Saving Tips</div>
+      <div id="smart-tips"></div>
+
+      <div class="section-title">Cheaper Alternatives in Kenya</div>
+      <div id="smart-market"></div>
+
+      <div class="section-title">M-Pesa Transaction Charges</div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label>Amount to Send (KSh)</label>
+        <input type="number" id="mpesa-amt" placeholder="1000" oninput="calcMpesa()">
+      </div>
+      <div class="mpesa-result" id="mpesa-result">
+        <div class="mpesa-row"><span>Amount to send</span><span id="mc-amt">—</span></div>
+        <div class="mpesa-row"><span>M-Pesa charge</span><span id="mc-fee" style="color:#E24B4A">—</span></div>
+        <div class="mpesa-row"><span>Total deducted from you</span><span id="mc-total">—</span></div>
+        <div class="mpesa-row total"><span>Recipient gets</span><span id="mc-recv">—</span></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="showTab('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showTab('spend')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Spend
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showTab('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Insights
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showTab('goals')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Goals
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showTab('smart')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10c0 4-2.5 7.5-6 9.3V22h-8v-.7C4.5 19.5 2 16 2 12A10 10 0 0 1 12 2z"/><line x1="12" y1="6" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Smart Save
+      <div class="nav-dot"></div>
+    </button>
+  </nav>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  wallets: { mpesa: 0, airtel: 0, bank: 0 },
+  txns: [],
+  goals: [],
+  budgets: { Food: 8000, Transport: 4000, Utilities: 3000, Shopping: 6000, Entertainment: 2000, Health: 2000, Education: 3000, Other: 2000 },
+  charts: {}
+};
+
+const CAT_EMOJI = { Food:'🍔', Transport:'🚌', Utilities:'💡', Shopping:'🛍️', Entertainment:'🎬', Health:'💊', Education:'📚', Other:'📦', Income:'💰' };
+const CAT_COLOR = { Food:'#1D9E75', Transport:'#378ADD', Shopping:'#D4537E', Utilities:'#EF9F27', Entertainment:'#7F77DD', Health:'#E24B4A', Education:'#5DCAA5', Other:'#888780' };
+
+function fmt(n) { return 'KSh ' + Math.round(n).toLocaleString('en-KE'); }
+function fmtShort(n) { return n >= 1000 ? 'KSh ' + (n/1000).toFixed(1) + 'k' : fmt(n); }
+
+// Date
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Tab
+function showTab(name) {
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    const tabs = ['home', 'spend', 'insights', 'goals', 'smart'];
+    b.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'insights') setTimeout(renderCharts, 80);
+  if (name === 'spend') { renderBudgetBars(); renderAlerts(); renderAllTxns(); }
+  if (name === 'goals') { renderGoals(); renderBudgetEditor(); }
+  if (name === 'smart') { renderSmartTips(); renderMarket(); }
+}
+
+// Wallet selection
+function selectWallet(w) {
+  document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('wc-' + w).classList.add('selected');
+  document.getElementById('add-wallet').value = w;
+  document.getElementById('sp-wallet').value = w;
+}
+
+// UI update
+function updateUI() {
+  const total = state.wallets.mpesa + state.wallets.airtel + state.wallets.bank;
+  document.getElementById('total-bal').textContent = fmt(total);
+  ['mpesa', 'airtel', 'bank'].forEach(w => document.getElementById('bal-' + w).textContent = fmt(state.wallets[w]));
+
+  const today = new Date().toDateString();
+  const spentToday = state.txns.filter(t => t.type === 'debit' && new Date(t.date).toDateString() === today).reduce((s, t) => s + t.amount, 0);
+  document.getElementById('spent-today').textContent = 'Spent today: ' + fmt(spentToday);
+
+  const now = new Date();
+  const weekAgo = new Date(now - 7 * 86400000);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const weekSpend = state.txns.filter(t => t.type === 'debit' && new Date(t.date) >= weekAgo).reduce((s, t) => s + t.amount, 0);
+  const monthSpend = state.txns.filter(t => t.type === 'debit' && new Date(t.date) >= monthStart).reduce((s, t) => s + t.amount, 0);
+  document.getElementById('week-spend').textContent = fmtShort(weekSpend);
+  document.getElementById('month-spend').textContent = fmtShort(monthSpend);
+  document.getElementById('txn-count').textContent = state.txns.length;
+
+  renderRecentTxns();
+  saveState();
+}
+
+// Add money
+function addMoney() {
+  const w = document.getElementById('add-wallet').value;
+  const amt = parseFloat(document.getElementById('add-amount').value) || 0;
+  const note = document.getElementById('add-note').value || 'Top up';
+  if (amt <= 0) { showToast('Enter a valid amount'); return; }
+  state.wallets[w] += amt;
+  state.txns.unshift({ id: Date.now(), type: 'credit', wallet: w, amount: amt, desc: note, cat: 'Income', date: new Date().toISOString() });
+  document.getElementById('add-amount').value = '';
+  document.getElementById('add-note').value = '';
+  showToast('✓ Added ' + fmt(amt) + ' to ' + w.charAt(0).toUpperCase() + w.slice(1));
+  updateUI();
+}
+
+// Spend money
+function spendMoney() {
+  const w = document.getElementById('sp-wallet').value;
+  const amt = parseFloat(document.getElementById('sp-amount').value) || 0;
+  const cat = document.getElementById('sp-cat').value;
+  const desc = document.getElementById('sp-desc').value || cat;
+  if (amt <= 0) { showToast('Enter a valid amount'); return; }
+  if (state.wallets[w] < amt) { showToast('Insufficient balance in ' + w); return; }
+  state.wallets[w] -= amt;
+  state.txns.unshift({ id: Date.now(), type: 'debit', wallet: w, amount: amt, desc, cat, date: new Date().toISOString() });
+  document.getElementById('sp-amount').value = '';
+  document.getElementById('sp-desc').value = '';
+  showToast('− ' + fmt(amt) + ' recorded from ' + w);
+  updateUI();
+  renderBudgetBars(); renderAlerts(); renderAllTxns();
+}
+
+// Render transactions
+function txnHTML(t) {
+  return `<div class="txn">
+    <div class="txn-left">
+      <div class="txn-icon" style="background:${t.type === 'credit' ? '#E1F5EE' : '#FCEBEB'}">${CAT_EMOJI[t.cat] || '💰'}</div>
+      <div>
+        <div class="txn-name">${t.desc}</div>
+        <div class="txn-meta">${t.cat} · ${t.wallet.toUpperCase()} · ${new Date(t.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })}</div>
+      </div>
+    </div>
+    <span class="txn-amt ${t.type}">${t.type === 'credit' ? '+' : '−'}${fmt(t.amount)}</span>
+  </div>`;
+}
+
+function renderRecentTxns() {
+  const el = document.getElementById('home-txns');
+  const recent = state.txns.slice(0, 8);
+  el.innerHTML = recent.length ? recent.map(txnHTML).join('') : '<div class="empty">No transactions yet</div>';
+}
+
+function renderAllTxns() {
+  const el = document.getElementById('spend-txns');
+  el.innerHTML = state.txns.length ? state.txns.map(txnHTML).join('') : '<div class="empty">No transactions yet</div>';
+}
+
+// Category spending totals
+function catSpend() {
+  const s = {};
+  state.txns.filter(t => t.type === 'debit').forEach(t => { s[t.cat] = (s[t.cat] || 0) + t.amount; });
+  return s;
+}
+
+// Budget bars
+function renderBudgetBars() {
+  const el = document.getElementById('budget-bars');
+  const sp = catSpend();
+  el.innerHTML = Object.entries(state.budgets).map(([cat, budget]) => {
+    const spent = sp[cat] || 0;
+    const pct = Math.min(100, Math.round(spent / budget * 100));
+    const color = pct >= 90 ? '#E24B4A' : pct >= 70 ? '#EF9F27' : '#1D9E75';
+    return `<div class="bbar">
+      <div class="bbar-top">
+        <span class="bbar-cat">${CAT_EMOJI[cat]} ${cat}</span>
+        <span class="bbar-vals">${fmt(spent)} / ${fmt(budget)}</span>
+      </div>
+      <div class="bbar-track"><div class="bbar-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// Alerts
+function renderAlerts() {
+  const el = document.getElementById('alerts');
+  const sp = catSpend();
+  const alerts = [];
+  Object.entries(state.budgets).forEach(([cat, budget]) => {
+    const spent = sp[cat] || 0;
+    const pct = spent / budget * 100;
+    if (pct >= 100) alerts.push({ type: 'warn', msg: `⚠️ ${cat} budget exceeded by ${fmt(spent - budget)}` });
+    else if (pct >= 80) alerts.push({ type: 'warn', msg: `⚠️ ${cat} is ${Math.round(pct)}% used — ${fmt(budget - spent)} remaining` });
+  });
+  const total = state.wallets.mpesa + state.wallets.airtel + state.wallets.bank;
+  if (total < 5000 && total > 0) alerts.push({ type: 'warn', msg: '⚠️ Low total balance — consider topping up soon' });
+  if (!alerts.length) alerts.push({ type: 'ok', msg: '✓ All budgets are on track. Keep it up!' });
+  el.innerHTML = alerts.map(a => `<div class="alert-item alert-${a.type}">${a.msg}</div>`).join('');
+}
+
+// Charts
+function renderCharts() {
+  // Week chart
+  const labels = [], days = [], weekData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toDateString());
+    labels.push(d.toLocaleDateString('en-KE', { weekday: 'short' }));
+    weekData.push(state.txns.filter(t => t.type === 'debit' && new Date(t.date).toDateString() === d.toDateString()).reduce((s, t) => s + t.amount, 0));
+  }
+  if (state.charts.week) state.charts.week.destroy();
+  state.charts.week = new Chart(document.getElementById('weekChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Spent (KSh)', data: weekData, backgroundColor: '#1D9E75', borderRadius: 8, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
+      scales: { y: { ticks: { callback: v => 'KSh ' + v.toLocaleString() }, grid: { color: 'rgba(0,0,0,0.04)' } }, x: { grid: { display: false } } }
+    }
+  });
+
+  // Category chart
+  const sp = catSpend();
+  const catKeys = Object.keys(sp).filter(k => sp[k] > 0);
+  if (state.charts.cat) state.charts.cat.destroy();
+  if (catKeys.length) {
+    state.charts.cat = new Chart(document.getElementById('catChart'), {
+      type: 'doughnut',
+      data: { labels: catKeys, datasets: [{ data: catKeys.map(k => sp[k]), backgroundColor: catKeys.map(k => CAT_COLOR[k] || '#888780'), borderWidth: 3, borderColor: '#fff' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 12, font: { size: 12, family: 'DM Sans' } } } } }
+    });
+  }
+
+  // Wallet chart
+  if (state.charts.wallet) state.charts.wallet.destroy();
+  state.charts.wallet = new Chart(document.getElementById('walletChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['M-Pesa', 'Airtel Money', 'Bank'],
+      datasets: [{ data: [state.wallets.mpesa, state.wallets.airtel, state.wallets.bank], backgroundColor: ['#1D9E75', '#E24B4A', '#378ADD'], borderWidth: 3, borderColor: '#fff' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 12, font: { size: 12, family: 'DM Sans' } } } } }
+  });
+}
+
+// Goals
+function addGoal() {
+  const name = document.getElementById('goal-name').value.trim();
+  const target = parseFloat(document.getElementById('goal-target').value) || 0;
+  const saved = parseFloat(document.getElementById('goal-saved').value) || 0;
+  const deadline = document.getElementById('goal-date').value;
+  if (!name || !target) { showToast('Fill in goal name and target'); return; }
+  state.goals.push({ id: Date.now(), name, target, saved, deadline });
+  ['goal-name', 'goal-target', 'goal-saved', 'goal-date'].forEach(id => document.getElementById(id).value = '');
+  showToast('✓ Goal added: ' + name);
+  renderGoals();
+  saveState();
+}
+
+function deleteGoal(id) {
+  state.goals = state.goals.filter(g => g.id !== id);
+  renderGoals();
+  saveState();
+}
+
+function renderGoals() {
+  const el = document.getElementById('goal-list');
+  if (!state.goals.length) { el.innerHTML = '<div class="empty">No goals yet — add your first!</div>'; return; }
+  el.innerHTML = state.goals.map(g => {
+    const pct = Math.min(100, Math.round(g.saved / g.target * 100));
+    const days = g.deadline ? Math.ceil((new Date(g.deadline) - new Date()) / 86400000) : null;
+    const remaining = g.target - g.saved;
+    return `<div class="goal-card">
+      <div class="goal-top">
+        <span class="goal-name">${g.name}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="goal-pct">${pct}%</span>
+          <button class="goal-delete" onclick="deleteGoal(${g.id})">✕</button>
+        </span>
+      </div>
+      <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
+      <div class="goal-sub">
+        <span>${fmt(g.saved)} of ${fmt(g.target)}</span>
+        <span>${days !== null ? days + ' days left' : ''} ${remaining > 0 ? '· Need ' + fmt(remaining) + ' more' : '· Achieved!'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Budget editor
+function renderBudgetEditor() {
+  const cats = Object.keys(state.budgets);
+  const el = document.getElementById('budget-editor');
+  el.innerHTML = cats.map(c => `
+    <div class="budget-editor-row">
+      <span class="budget-editor-cat">${CAT_EMOJI[c]} ${c}</span>
+      <input class="budget-editor-input" type="number" value="${state.budgets[c]}"
+        oninput="state.budgets['${c}']=+this.value;renderBudgetBars();saveState()">
+    </div>`).join('');
+}
+
+// Smart tips
+function renderSmartTips() {
+  const sp = catSpend();
+  const tips = [];
+  if ((sp.Food || 0) > 6000) tips.push({ title: 'Cook more at home', badge: 'save', savings: '~KSh 3,000/mo', desc: 'Eating out costs 3–5x more than cooking. Batch-cook meals on Sundays to save significantly.', opts: ['Naivas', 'Tuskys', 'Uchumi'] });
+  if ((sp.Transport || 0) > 3000) tips.push({ title: 'Use Matatu over Bolt/Uber', badge: 'save', savings: '~KSh 1,500/mo', desc: 'Matatu routes cover most of Nairobi at a fraction of the cost of ride-hailing for daily commutes.', opts: ['Route 111', 'Route 46', 'CBD Express'] });
+  tips.push({ title: 'Clear Fuliza within 24hrs', badge: 'warn', savings: 'Avoid daily 1% fee', desc: 'Fuliza charges 1% daily on balances above KSh 1,000. Clear it fast to stop charges compounding.', opts: ['Repay early', 'Avoid small loans', 'Use savings first'] });
+  tips.push({ title: 'Compare mobile bundles monthly', badge: 'save', savings: '~KSh 500/mo', desc: 'Airtel often beats Safaricom on heavy data plans. Telkom has competitive night bundles worth checking.', opts: ['Airtel 4G', 'Telkom', 'Safaricom'] });
+  if ((sp.Entertainment || 0) > 1500) tips.push({ title: 'Share streaming subscriptions', badge: 'save', savings: '~KSh 800/mo', desc: 'Netflix, Showmax and Spotify allow shared plans. Split costs with family to cut entertainment bills significantly.', opts: ['Netflix shared', 'Showmax', 'Spotify Family'] });
+  if (!tips.length) tips.push({ title: 'Your spending looks healthy!', badge: 'save', savings: 'On track', desc: 'Keep maintaining your budget limits and you\'re building great financial habits.', opts: [] });
+  document.getElementById('smart-tips').innerHTML = tips.map(t => `<div class="smart-card">
+    <div class="smart-top"><span class="smart-item">${t.title}</span><span class="badge badge-${t.badge}">${t.savings}</span></div>
+    <div class="smart-desc">${t.desc}</div>
+    <div class="smart-options">${t.opts.map((o, i) => `<span class="opt-chip${i === 0 ? ' best' : ''}">${o}</span>`).join('')}</div>
+  </div>`).join('');
+}
+
+// Market alternatives
+function renderMarket() {
+  const market = [
+    { item: 'Unga Jogoo (2kg)', best: 'Naivas — KSh 165', others: ['Tuskys KSh 178', 'Carrefour KSh 185'], save: 'KSh 20' },
+    { item: 'Sukari (1kg)', best: 'Uchumi — KSh 105', others: ['Naivas KSh 112', 'Quickmart KSh 110'], save: 'KSh 7' },
+    { item: 'Cooking Oil (1L)', best: 'Quickmart — KSh 290', others: ['Naivas KSh 305', 'Carrefour KSh 320'], save: 'KSh 30' },
+    { item: 'Eggs (tray of 30)', best: 'Tuskys — KSh 380', others: ['Naivas KSh 400', 'Carrefour KSh 420'], save: 'KSh 40' },
+    { item: 'Internet 10GB bundle', best: 'Airtel — KSh 499', others: ['Safaricom KSh 700', 'Telkom KSh 549'], save: 'KSh 201' },
+    { item: 'Airtime (KSh 100)', best: 'Airtel *544# (20% bonus)', others: ['M-Pesa KSh 100', 'Outlets KSh 100'], save: '20% bonus' },
+    { item: 'Gas cylinder (6kg refill)', best: 'Hashi Energy — KSh 1,050', others: ['Total KSh 1,150', 'Pro Gas KSh 1,100'], save: 'KSh 100' },
+  ];
+  document.getElementById('smart-market').innerHTML = market.map(m => `<div class="smart-card">
+    <div class="smart-top"><span class="smart-item">${m.item}</span><span class="badge badge-save">Save ${m.save}</span></div>
+    <div class="smart-desc">Best: <strong>${m.best}</strong></div>
+    <div class="smart-options"><span class="opt-chip best">Best pick</span>${m.others.map(o => `<span class="opt-chip">${o}</span>`).join('')}</div>
+  </div>`).join('');
+}
+
+// M-Pesa charges
+const MPESA_BANDS = [
+  [1, 100, 0], [101, 500, 7], [501, 1000, 13], [1001, 1500, 23], [1501, 2500, 33],
+  [2501, 3500, 53], [3501, 5000, 57], [5001, 7500, 78], [7501, 10000, 90],
+  [10001, 15000, 100], [15001, 20000, 105], [20001, 35000, 108], [35001, 50000, 108]
+];
+function calcMpesa() {
+  const amt = parseFloat(document.getElementById('mpesa-amt').value) || 0;
+  const el = document.getElementById('mpesa-result');
+  if (!amt) { el.style.display = 'none'; return; }
+  const band = MPESA_BANDS.find(b => amt >= b[0] && amt <= b[1]);
+  const fee = band ? band[2] : 0;
+  el.style.display = 'block';
+  document.getElementById('mc-amt').textContent = fmt(amt);
+  document.getElementById('mc-fee').textContent = '− KSh ' + fee;
+  document.getElementById('mc-total').textContent = fmt(amt + fee);
+  document.getElementById('mc-recv').textContent = fmt(amt);
+}
+
+// Persistence
+function saveState() {
+  try { localStorage.setItem('pesasmart', JSON.stringify({ wallets: state.wallets, txns: state.txns, goals: state.goals, budgets: state.budgets })); } catch(e) {}
+}
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pesasmart'));
+    if (saved) {
+      Object.assign(state.wallets, saved.wallets || {});
+      state.txns = saved.txns || [];
+      state.goals = saved.goals || [];
+      Object.assign(state.budgets, saved.budgets || {});
+    }
+  } catch(e) {}
+}
+
+// Init
+loadState();
+updateUI();
+renderBudgetBars();
+renderAlerts();
+</script>
+</body>
+</html>
